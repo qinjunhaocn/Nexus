@@ -3,8 +3,6 @@ package com.voxyn.nexus
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
-import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -20,19 +18,13 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler {
     companion object {
         private const val CHANNEL = "com.voxyn.nexus/root_tools"
         private const val BUFFER_SIZE = 1024 * 1024
+        private const val EXPORT_DOCUMENT_REQUEST = 1001
     }
 
     private val worker = Executors.newSingleThreadExecutor()
     private val partitions = mutableMapOf<String, PartitionRecord>()
     private lateinit var channel: MethodChannel
     private var pendingPickerResult: MethodChannel.Result? = null
-    private var pendingPickerMode: PickerMode? = null
-
-    private val createDocument = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { activityResult ->
-        completePicker(activityResult.resultCode, activityResult.data?.data)
-    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -90,16 +82,16 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler {
         requireRoot()
         val script = """
             for link in /dev/block/by-name/*; do
-              [ -e "\$link" ] || continue
-              name=\$(basename "\$link")
-              path=\$(readlink -f "\$link")
-              case "\$path" in /dev/block/*) ;; *) continue ;; esac
-              size=\$(blockdev --getsize64 "\$path" 2>/dev/null || echo 0)
+              [ -e "${'$'}link" ] || continue
+              name=${'$'}(basename "${'$'}link")
+              path=${'$'}(readlink -f "${'$'}link")
+              case "${'$'}path" in /dev/block/*) ;; *) continue ;; esac
+              size=${'$'}(blockdev --getsize64 "${'$'}path" 2>/dev/null || echo 0)
               mounted=false
-              grep -Fq " \$path " /proc/mounts && mounted=true
+              grep -Fq " ${'$'}path " /proc/mounts && mounted=true
               logical=false
-              case "\$path" in /dev/block/dm-*) logical=true ;; esac
-              printf '%s|%s|%s|%s|%s\n' "\$name" "\$path" "\$size" "\$mounted" "\$logical"
+              case "${'$'}path" in /dev/block/dm-*) logical=true ;; esac
+              printf '%s|%s|%s|%s|%s\n' "${'$'}name" "${'$'}path" "${'$'}size" "${'$'}mounted" "${'$'}logical"
             done
         """.trimIndent()
         val discovered = runRoot(script, 20).lineSequence().mapNotNull { line ->
@@ -121,19 +113,24 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler {
     private fun pickExportDestination(result: MethodChannel.Result) {
         if (pendingPickerResult != null) return result.error("picker_busy", "已有文件选择请求正在进行。", null)
         pendingPickerResult = result
-        pendingPickerMode = PickerMode.EXPORT
-        createDocument.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+        startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/octet-stream"
             putExtra(Intent.EXTRA_TITLE, "nexus-partition.img")
-        })
+        }, EXPORT_DOCUMENT_REQUEST)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == EXPORT_DOCUMENT_REQUEST) {
+            completePicker(resultCode, data?.data)
+        }
     }
 
     private fun completePicker(resultCode: Int, uri: Uri?) {
         val result = pendingPickerResult ?: return
-        val mode = pendingPickerMode
         pendingPickerResult = null
-        pendingPickerMode = null
         if (resultCode != Activity.RESULT_OK || uri == null) {
             result.error("selection_cancelled", "未选择文件。", null)
             return
@@ -203,8 +200,6 @@ class MainActivity : FlutterActivity(), MethodChannel.MethodCallHandler {
         super.onDestroy()
     }
 }
-
-private enum class PickerMode { EXPORT }
 
 private data class PartitionRecord(
     val id: String,
