@@ -40,7 +40,7 @@ class EmptyToolboxState extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                '$destinationName is waiting for its first tool. When you are ready, Nexus will keep everything you need in one calm, focused workspace.',
+                '$destinationName 正在等待第一个工具。准备好后，Nexus 会把你需要的一切集中到清爽、专注的工作区。',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: colors.onSurfaceVariant,

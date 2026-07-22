@@ -8,6 +8,7 @@ A Material Design 3 aggregation toolbox for **Android** and **Windows**. The cur
 - Android 12+ dynamic colors with a stable Material 3 fallback palette.
 - Automatic light/dark mode controlled by the operating system.
 - Android application ID: `com.voxyn.nexus`.
+- 玩机空间提供 Android Root 状态检查、设备相关的 LSPosed 启动器，以及只读的原始分区镜像导出。
 
 ## Development
 
@@ -24,6 +25,12 @@ Run against an attached Android device/emulator or Windows desktop target:
 ```powershell
 flutter run
 ```
+
+## Root tools and data safety
+
+玩机空间中的 Root 工具只支持 Android；Windows 仅显示不可用状态。Root 授权、secret-code 广播以及分区布局会因设备、Android 版本和 OEM 固件而不同，LSPosed 启动入口无法保证所有设备可用。
+
+分区管理器只提供**导出**：它会在用户通过系统文件选择器指定位置后，创建原始分区镜像并显示校验和。导出的镜像可能包含个人数据、设备标识或其他敏感内容，请仅保存到可信位置。Nexus 不提供向真实设备分区写入镜像的功能。
 
 ## CI
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../tinkering_space/presentation/tinkering_space_screen.dart';
 import 'widgets/empty_toolbox_state.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -12,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   static const _destinations = [
     _Destination(
-      label: 'Workspace',
+      label: '玩机空间',
       icon: Icons.space_dashboard_outlined,
       selectedIcon: Icons.space_dashboard,
     ),
@@ -22,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedIcon: Icons.handyman,
     ),
     _Destination(
-      label: 'Settings',
+      label: '关于',
       icon: Icons.settings_outlined,
       selectedIcon: Icons.settings,
     ),
@@ -144,6 +145,10 @@ class _Content extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (destination.label == '玩机空间') {
+      return const TinkeringSpaceScreen();
+    }
+
     return SafeArea(
       top: false,
       child: Center(
