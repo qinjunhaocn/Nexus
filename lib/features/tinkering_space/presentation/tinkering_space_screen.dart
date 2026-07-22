@@ -149,7 +149,7 @@ class _TinkeringSpaceScreenState extends State<TinkeringSpaceScreen> {
         _ToolCard(
           icon: Icons.storage_outlined,
           title: '镜像分区管理',
-          description: '查看设备分区，导出原始镜像或写入大小完全匹配的镜像。写入可能损坏设备。',
+          description: '通过 /dev/block/by-name 发现分区并导出原始镜像。写入真实分区未开放。',
           actionLabel: '打开',
           enabled: isAvailable,
           onPressed: _openPartitionManager,

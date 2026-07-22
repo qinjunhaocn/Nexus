@@ -1,16 +1,39 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
 
 import '../domain/partition.dart';
+import '../domain/partition_discovery_event.dart';
 import '../domain/root_capability.dart';
 
 class AndroidRootToolsGateway {
-  AndroidRootToolsGateway({MethodChannel? channel})
-    : _channel = channel ?? const MethodChannel(_channelName);
+  AndroidRootToolsGateway({
+    MethodChannel? channel,
+    EventChannel? partitionEvents,
+  }) : _channel = channel ?? const MethodChannel(_channelName),
+       _partitionEvents =
+           partitionEvents ?? const EventChannel(_partitionEventsName);
 
   static const _channelName = 'com.voxyn.nexus/root_tools';
+  static const _partitionEventsName = 'com.voxyn.nexus/root_tools/partitions';
+
   final MethodChannel _channel;
+  final EventChannel _partitionEvents;
+
+  Stream<PartitionDiscoveryEvent> get partitionDiscoveryEvents {
+    if (!Platform.isAndroid) {
+      return Stream<PartitionDiscoveryEvent>.error(
+        UnsupportedError('分区管理仅支持 Android 设备。'),
+      );
+    }
+    return _partitionEvents.receiveBroadcastStream().map((event) {
+      if (event is! Map<Object?, Object?>) {
+        throw const FormatException('分区发现事件格式无效。');
+      }
+      return PartitionDiscoveryEvent.fromMap(event);
+    });
+  }
 
   Future<RootCapability> getRootCapability() async {
     if (!Platform.isAndroid) {
@@ -40,27 +63,25 @@ class AndroidRootToolsGateway {
     return await _channel.invokeMethod<String>('launchLsposed') ?? '命令未返回结果。';
   }
 
-  Future<List<Partition>> listPartitions() async {
+  Future<int> startPartitionDiscovery() async {
     _ensureAndroid();
-    final partitions = await _channel.invokeListMethod<Object?>(
-      'listPartitions',
-    );
-    return (partitions ?? const [])
-        .whereType<Map<Object?, Object?>>()
-        .map(Partition.fromMap)
-        .toList(growable: false);
+    return await _channel.invokeMethod<int>('startPartitionDiscovery') ??
+        (throw StateError('无法启动分区发现。'));
   }
 
-  Future<String> pickExportDestination() async {
+  Future<void> cancelPartitionDiscovery(int scanId) async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('cancelPartitionDiscovery', {
+      'scanId': scanId,
+    });
+  }
+
+  Future<String> pickExportDestination(Partition partition) async {
     _ensureAndroid();
-    return await _channel.invokeMethod<String>('pickExportDestination') ??
+    return await _channel.invokeMethod<String>('pickExportDestination', {
+          'suggestedName': '${partition.name}.img',
+        }) ??
         (throw StateError('未选择输出文件。'));
-  }
-
-  Future<String> pickImportSource() async {
-    _ensureAndroid();
-    return await _channel.invokeMethod<String>('pickImportSource') ??
-        (throw StateError('未选择输入镜像。'));
   }
 
   Future<String> exportPartition({
