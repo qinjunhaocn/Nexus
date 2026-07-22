@@ -41,9 +41,7 @@ class _TinkeringSpaceScreenState extends State<TinkeringSpaceScreen> {
   Future<void> _launchLsposed() async {
     setState(() => _launching = true);
     try {
-      final output = await _gateway.launchLsposed();
-      if (!mounted) return;
-      _showResult('LSPosed 启动器', output);
+      await _gateway.launchLsposed();
     } catch (error) {
       if (!mounted) return;
       _showResult('无法启动', '$error');
